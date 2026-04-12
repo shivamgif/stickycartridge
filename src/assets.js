@@ -1,0 +1,18 @@
+export const Sprites = {
+  background: require('../assets/sprites/Background2x.png'),
+  screen: require('../assets/sprites/Screen2x.png'),
+  batteryCharged: require('../assets/sprites/Battery_charged2x.png'),
+  batteryCharging: require('../assets/sprites/Battery_charging2x.png'),
+  batteryLow: require('../assets/sprites/Battery_low2x.png'),
+  dpadUp: require('../assets/sprites/Plus_pressed_up2x.png'),
+  dpadDown: require('../assets/sprites/Plus_pressed_down2x.png'),
+  dpadLeft: require('../assets/sprites/Plus_pressed_left2x.png'),
+  dpadRight: require('../assets/sprites/Plus_pressed_right2x.png'),
+  dpadNeutral: require('../assets/sprites/Plus_unpressed2x.png'),
+  faceAUp: require('../assets/sprites/Circle_unpressed2x.png'),
+  faceAPressed: require('../assets/sprites/Circle_pressed2x.png'),
+  faceBUp: require('../assets/sprites/Pill_unpressed2x.png'),
+  faceBAltUp: require('../assets/sprites/Pill_unpressed2x-1.png'),
+  selectUp: require('../assets/sprites/Pill_unpressed2x.png'),
+  startUp: require('../assets/sprites/Pill_unpressed2x-1.png'),
+};
