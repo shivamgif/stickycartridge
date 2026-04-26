@@ -111,8 +111,10 @@ export function useGameboyEmulator(settings = {}) {
       };
       const colors = PALETTES[settings.palette] || PALETTES.DMG;
       gameboy.gpu.colors = colors;
+      // Synchronize core FPS with settings to prevent internal over-looping
+      gameboy.fps = parseInt(settings.fps || '30', 10);
     }
-  }, [settings.palette]);
+  }, [settings.palette, settings.fps]);
 
   useEffect(() => {
     try {
@@ -123,17 +125,12 @@ export function useGameboyEmulator(settings = {}) {
 
       gameboy.onFrameFinished((imageData) => {
         const now = Date.now();
-        const settings = settingsRef.current;
-        const fpsThrottle = settings?.fps === '60' ? 14 : 30; // Slightly under to allow for jitter
         
-        if (now - lastFrameEncodeAtRef.current < fpsThrottle) {
-          return;
-        }
-
-        // Quick hash of pixel buffer to detect changes (every 16th pixel for speed)
+        // Quick hash of pixel buffer to detect changes (every 32nd byte for better precision)
         const pixels = imageData.data;
         let hash = 0;
-        for (let i = 0; i < pixels.length; i += 64) {
+        const len = pixels.length;
+        for (let i = 0; i < len; i += 32) {
           hash = (hash << 5) - hash + pixels[i];
           hash |= 0;
         }
@@ -146,6 +143,7 @@ export function useGameboyEmulator(settings = {}) {
         lastFrameEncodeAtRef.current = now;
 
         // BMP encoding is uncompressed and extremely fast on mobile CPU
+        // We use pixels.buffer directly for the underlying ArrayBuffer
         const nextFrame = encodeBMP(pixels.buffer, imageData.width, imageData.height);
         if (nextFrame) {
           setFrameUri(nextFrame);
@@ -159,6 +157,10 @@ export function useGameboyEmulator(settings = {}) {
     }
 
     return () => {
+      if (emulatorRef.current) {
+        // Stop any internal timers if possible (not explicitly in .d.ts but good practice)
+        try { emulatorRef.current.fps = 0; } catch {}
+      }
       emulatorRef.current = null;
     };
   }, []);
