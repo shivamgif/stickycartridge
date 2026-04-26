@@ -21,17 +21,22 @@ Platform: iOS + Android + Web. Portrait only. Expo SDK 54, React 19, New Archite
 | `src/assets.js` | Sprite asset `require()` registry | `Sprites` |
 | `src/components/GameBoyShell.js` | Full-screen sprite shell + button routing | `GameBoyShell` |
 | `src/components/FrameDisplay.js` | Renders emulator frame or placeholder | `FrameDisplay` |
+| `src/components/ScanlinesOverlay.js` | Optional CRT scanlines layer over screen | `ScanlinesOverlay` |
 | `src/emulator/useGameboyEmulator.js` | Wraps `gameboy-emulator` npm package | `useGameboyEmulator` |
 | `src/utils/imageDataToDataUri.js` | ImageData → PNG data URI (upng-js) | `imageDataToDataUri` |
 | `src/os/useGameBoyOS.js` | **OS state machine** — owns current screen + nav history | `useGameBoyOS` |
 | `src/os/screens/BootScreen.js` | Animated boot logo, auto-advances to HOME | `BootScreen` |
 | `src/os/screens/HomeScreen.js` | Clock + 3 icons: Play, Library, Store | `HomeScreen` |
 | `src/os/screens/RomLibraryScreen.js` | Scrollable list of stored ROMs | `RomLibraryScreen` |
+| `src/os/screens/RomUploadScreen.js` | Transient screen owning the file-picker flow | `RomUploadScreen` |
 | `src/os/screens/PauseMenuScreen.js` | In-game pause: Resume/SaveState/LoadROM/Settings/Exit | `PauseMenuScreen` |
 | `src/os/screens/SettingsScreen.js` | Palette, FPS, haptics, SFX, scanlines | `SettingsScreen` |
 | `src/os/screens/StoreScreen.js` | Supabase-backed ROM community store | `StoreScreen` |
 | `src/os/useRomLibrary.js` | Local ROM CRUD (expo-file-system + JSON metadata) | `useRomLibrary` |
-| `src/os/useStore.js` | Supabase fetch/upload for social store | `useStore` |
+| `src/os/useSaveStates.js` | SRAM auto-persistence + 3-slot save state snapshots | `useSaveStates` |
+| `src/os/useStore.js` | Supabase fetch/upload/download/like for social store | `useStore` |
+| `src/os/screens/SaveStateScreen.js` | 3-slot save/load/delete UI with D-pad navigation | `SaveStateScreen` |
+| `src/lib/supabase.js` | Supabase client singleton, FileSystem session adapter | `supabase` |
 
 ---
 
@@ -64,6 +69,7 @@ BOOT → HOME → ROM_LIBRARY → (pick ROM) → IN_GAME
                        ROM_UPLOAD (opens system picker briefly, returns)
         HOME → STORE
 IN_GAME → (START) → PAUSE_MENU → SETTINGS
+                              → SAVE_STATES (3-slot save/load/delete)
                               → ROM_LIBRARY
                               → HOME
 ```
@@ -109,24 +115,38 @@ State machine lives in `useGameBoyOS`. Each screen is a pure component; `useGame
 
 ## Current State
 
-**Phase:** Phase 1 complete — memory system bootstrapped.
+**Phase:** Phase 7 complete — Save States & SRAM Persistence.
 
 **Done:**
 - [x] Sprite-based Game Boy shell with D-pad, A/B, Start/Select
 - [x] Working emulator (gameboy-emulator) with ROM file picker
-- [x] 30fps frame rendering pipeline (ImageData → PNG → Image)
-- [x] Button SFX (square wave) + haptics
-- [x] Basic 3-item in-shell menu (Start+Select combo)
-- [x] CLAUDE.md + ARCHITECTURE.md + PROGRESS.md created
+- [x] 30/60fps frame rendering pipeline (throttle driven by `settings.fps`)
+- [x] Button SFX (square wave) + haptics (both togglable via Settings)
+- [x] GameBoyOS state machine with BOOT → HOME → ROM_LIBRARY → IN_GAME flow
+- [x] ROM Library (local storage, CRUD, markPlayed)
+- [x] ROM_UPLOAD as dedicated OS screen
+- [x] Settings screen: palette / fps / haptics / sfx / scanlines
+- [x] Palette switching live, Scanlines overlay, Settings persisted via FileSystem
+- [x] Social Store: browse, upload (with disclaimer), download, like/unlike
+- [x] Supabase anonymous auth, FileSystem session persistence
+- [x] Boot animation: spring logo drop, subtitle slide, 3× blink, screen fade
+- [x] Screen power-on flash on every screen transition
+- [x] B button: circle pressed sprite; Start/Select: pressed tint overlay
+- [x] DEBUG_LAYOUT flag for button hitbox audit
+- [x] SRAM auto-persistence (auto-save every 30s, on app background, on exit)
+- [x] Save state snapshots (3 slots per ROM, full CPU+GPU+memory serialization)
+- [x] Save State OS screen (SAVE/LOAD/DELETE per slot, delete confirmation)
+- [x] Auto-load SRAM on ROM start, auto-save on Start+Select force-quit
 
-**In progress:**
-- [ ] Phase 2: GameBoyOS state machine (`src/os/`)
+**Pending user action:**
+- [ ] Fill in `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `.env` (get from Supabase dashboard → Settings → API)
+- [ ] Run `supabase/schema.sql` in Supabase SQL Editor
+- [ ] Create `roms` storage bucket (private) in Supabase dashboard
 
-**Up next:**
-- Phase 3: ROM Library (local storage)
-- Phase 4: Settings screen
-- Phase 5: Social Store (Supabase)
-- Phase 6: Sprite alignment audit
+**Deferred / Future:**
+- Custom palette hex editor in Settings (presets via L/R already work)
+- Pressed sprite assets for Start/Select (would need new PNG files)
+- Cloud save sync (Supabase Storage)
 
 ---
 

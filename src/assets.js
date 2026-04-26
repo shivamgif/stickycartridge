@@ -11,8 +11,8 @@ export const Sprites = {
   dpadNeutral: require('../assets/sprites/Plus_unpressed2x.png'),
   faceAUp: require('../assets/sprites/Circle_unpressed2x.png'),
   faceAPressed: require('../assets/sprites/Circle_pressed2x.png'),
-  faceBUp: require('../assets/sprites/Pill_unpressed2x.png'),
-  faceBAltUp: require('../assets/sprites/Pill_unpressed2x-1.png'),
+  faceBUp: require('../assets/sprites/Circle_unpressed2x.png'),
+  faceBAltUp: require('../assets/sprites/Circle_pressed2x.png'),
   selectUp: require('../assets/sprites/Pill_unpressed2x.png'),
   startUp: require('../assets/sprites/Pill_unpressed2x-1.png'),
 };

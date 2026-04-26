@@ -11,6 +11,7 @@ export const SCREENS = {
   PAUSE_MENU: 'PAUSE_MENU',
   SETTINGS: 'SETTINGS',
   STORE: 'STORE',
+  SAVE_STATES: 'SAVE_STATES',
 };
 
 const MAX_HISTORY = 10;

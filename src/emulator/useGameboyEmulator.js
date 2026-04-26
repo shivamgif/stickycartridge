@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Buffer } from 'buffer';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-
-import { imageDataToDataUri } from '../utils/imageDataToDataUri';
+import { encodeBMP } from '../utils/FastBMP';
 
 const initialButtons = {
   up: false,
@@ -70,10 +69,11 @@ function getCartridgeTypeByte(romData) {
   return new DataView(romData).getUint8(CARTRIDGE_TYPE_OFFSET);
 }
 
-export function useGameboyEmulator() {
+export function useGameboyEmulator(settings = {}) {
   const emulatorRef = useRef(null);
   const startedRef = useRef(false);
   const lastFrameEncodeAtRef = useRef(0);
+  const lastFrameHashRef = useRef(0);
 
   const [frameUri, setFrameUri] = useState(null);
   const [romName, setRomName] = useState('No ROM loaded');
@@ -81,6 +81,38 @@ export function useGameboyEmulator() {
   const [isRunning, setIsRunning] = useState(false);
   const [buttonState, setButtonState] = useState(initialButtons);
   const [isCoreReady, setIsCoreReady] = useState(false);
+
+  // Settings refs to avoid restarting the emulator when they change
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    settingsRef.current = settings;
+    
+    const gameboy = emulatorRef.current;
+    if (gameboy && gameboy.gpu && settings.palette) {
+      const PALETTES = {
+        DMG: [
+          { red: 155, green: 188, blue: 15 },
+          { red: 139, green: 172, blue: 15 },
+          { red: 48,  green: 98,  blue: 48 },
+          { red: 15,  green: 56,  blue: 15 },
+        ],
+        POCKET: [
+          { red: 196, green: 207, blue: 161 },
+          { red: 139, green: 149, blue: 109 },
+          { red: 77,  green: 83,  blue: 60  },
+          { red: 31,  green: 31,  blue: 31  },
+        ],
+        GREY: [
+          { red: 224, green: 224, blue: 224 },
+          { red: 160, green: 160, blue: 160 },
+          { red: 80,  green: 80,  blue: 80  },
+          { red: 32,  green: 32,  blue: 32  },
+        ]
+      };
+      const colors = PALETTES[settings.palette] || PALETTES.DMG;
+      gameboy.gpu.colors = colors;
+    }
+  }, [settings.palette]);
 
   useEffect(() => {
     try {
@@ -91,14 +123,30 @@ export function useGameboyEmulator() {
 
       gameboy.onFrameFinished((imageData) => {
         const now = Date.now();
-        // Encoding every frame to PNG data URI is expensive on mobile JS.
-        // Throttle display updates to keep emulation/input responsive.
-        if (now - lastFrameEncodeAtRef.current < 33) {
+        const settings = settingsRef.current;
+        const fpsThrottle = settings?.fps === '60' ? 14 : 30; // Slightly under to allow for jitter
+        
+        if (now - lastFrameEncodeAtRef.current < fpsThrottle) {
           return;
         }
 
+        // Quick hash of pixel buffer to detect changes (every 16th pixel for speed)
+        const pixels = imageData.data;
+        let hash = 0;
+        for (let i = 0; i < pixels.length; i += 64) {
+          hash = (hash << 5) - hash + pixels[i];
+          hash |= 0;
+        }
+
+        if (hash === lastFrameHashRef.current) {
+          return;
+        }
+
+        lastFrameHashRef.current = hash;
         lastFrameEncodeAtRef.current = now;
-        const nextFrame = imageDataToDataUri(imageData);
+
+        // BMP encoding is uncompressed and extremely fast on mobile CPU
+        const nextFrame = encodeBMP(pixels.buffer, imageData.width, imageData.height);
         if (nextFrame) {
           setFrameUri(nextFrame);
         }
@@ -137,6 +185,42 @@ export function useGameboyEmulator() {
     gameboy.memory.reset();
     setStatusText('Emulator reset');
   }, []);
+
+  // Load a ROM from a pre-read ArrayBuffer (used by ROM library).
+  const loadRomBuffer = useCallback(async (romData, name) => {
+    const gameboy = emulatorRef.current;
+    if (!gameboy) {
+      setStatusText('Emulator core unavailable');
+      return false;
+    }
+
+    const cartridgeType = getCartridgeTypeByte(romData);
+    if (cartridgeType === null || !SUPPORTED_CARTRIDGE_TYPES.has(cartridgeType)) {
+      const hexType = cartridgeType === null ? 'unknown' : `0x${cartridgeType.toString(16).padStart(2, '0')}`;
+      setStatusText(`Unsupported cartridge type ${hexType}`);
+      setIsRunning(false);
+      return false;
+    }
+
+    gameboy.loadGame(romData);
+
+    const supportsSharedArrayBuffer = typeof globalThis.SharedArrayBuffer !== 'undefined';
+    if (supportsSharedArrayBuffer) {
+      try { gameboy.apu.enableSound(); } catch {}
+    }
+
+    syncInputs(gameboy, buttonState);
+
+    if (!startedRef.current) {
+      startedRef.current = true;
+      gameboy.run();
+    }
+
+    setRomName(name ?? 'ROM');
+    setStatusText('ROM loaded');
+    setIsRunning(true);
+    return true;
+  }, [buttonState]);
 
   const loadRomFromDocument = useCallback(async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -222,7 +306,9 @@ export function useGameboyEmulator() {
     isRunning,
     buttonState,
     pickRom: loadRomFromDocument,
+    loadRomBuffer,
     reset,
     setButton,
+    emulatorRef,
   };
 }

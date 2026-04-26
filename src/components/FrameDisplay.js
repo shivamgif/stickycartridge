@@ -1,8 +1,9 @@
+import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { Sprites } from '../assets';
 
-export function FrameDisplay({ frameUri, romName, statusText, isRunning }) {
+export const FrameDisplay = React.memo(({ frameUri, romName, statusText, isRunning }) => {
   if (frameUri) {
     return (
       <Image
@@ -23,7 +24,7 @@ export function FrameDisplay({ frameUri, romName, statusText, isRunning }) {
       </Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   frame: {
