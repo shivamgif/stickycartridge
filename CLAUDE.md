@@ -49,7 +49,7 @@ D-Pad Up/Down    → scroll list / navigate menu
 D-Pad Left/Right → tab / page switch
 A                → confirm / select
 B                → back / cancel (go to previous screen)
-Start            → pause game (IN_GAME) / open menu
+Start            → in-game action (IN_GAME) / open menu (LONG PRESS)
 Select           → secondary action (toggle option, show info)
 Start + Select   → force-quit to HOME from anywhere
 ```

@@ -48,7 +48,7 @@ GameBoyShell receives onPressButton(button, isPressed)
 │
 ├─ if currentScreen === 'IN_GAME'
 │    └─ forward to useGameboyEmulator.setButton(button, isPressed)
-│       EXCEPT: Start press → navigate('PAUSE_MENU')
+│       EXCEPT: Start long-press → navigate('PAUSE_MENU')
 │
 └─ else (any OS screen)
      └─ forward to currentScreenComponent via onButton prop

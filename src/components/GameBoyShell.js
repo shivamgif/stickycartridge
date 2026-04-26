@@ -71,22 +71,26 @@ function buildSquareWaveWavBase64({
   return Buffer.from(new Uint8Array(buffer)).toString('base64');
 }
 
-const ShellButton = React.memo(({ style, onPressIn, onPressOut, pressed }) => {
+const ShellButton = React.memo(({ style, onPressIn, onPressOut, onLongPress, pressed }) => {
   return (
     <Pressable
       onPressIn={onPressIn}
       onPressOut={onPressOut}
+      onLongPress={onLongPress}
+      delayLongPress={450}
       style={[styles.shellButton, style, pressed && styles.shellButtonPressed]}
     />
   );
 });
 
-const SpriteButton = React.memo(({ source, pressedSource, style, onPressIn, onPressOut, pressed, accessibilityLabel }) => {
+const SpriteButton = React.memo(({ source, pressedSource, style, onPressIn, onPressOut, onLongPress, pressed, accessibilityLabel }) => {
   return (
     <Pressable
       accessibilityLabel={accessibilityLabel}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
+      onLongPress={onLongPress}
+      delayLongPress={450}
       style={[styles.spriteButton, style, pressed && styles.spriteButtonPressed]}
     >
       <Image source={pressed ? pressedSource : source} style={styles.spriteImage} resizeMode="stretch" />
@@ -320,12 +324,9 @@ export function GameBoyShell({
       }
     }
 
-    // IN_GAME: Start → pause, all other buttons → emulator.
+    // IN_GAME: forward all buttons to emulator.
+    // Start long-press will trigger the Pause Menu (handled via onLongPress).
     if (currentScreen === SCREENS.IN_GAME) {
-      if (button === 'start') {
-        navigate(SCREENS.PAUSE_MENU);
-        return;
-      }
       onPressButton(button, true);
       return;
     }
@@ -343,6 +344,14 @@ export function GameBoyShell({
       osButtonHandlerRef.current?.(button, false);
     }
   }, [currentScreen, onPressButton]);
+
+  const onStartLongPress = useCallback(() => {
+    if (currentScreen === SCREENS.IN_GAME) {
+      // Release Start in core so it doesn't get stuck held down while menu is open
+      onPressButton('start', false);
+      navigate(SCREENS.PAUSE_MENU);
+    }
+  }, [currentScreen, navigate, onPressButton]);
 
   // Shared props passed to every OS screen.
   const osProps = useMemo(() => ({
@@ -468,6 +477,7 @@ export function GameBoyShell({
               style={[styles.metaButton, fromDesignRect(372, 1326, 101, 65)]}
               onPressIn={() => onButtonPressIn('start')}
               onPressOut={() => onButtonPressOut('start')}
+              onLongPress={onStartLongPress}
               pressed={effectivePressed.start}
             />
             {DEBUG_LAYOUT && <View style={[styles.debugHitbox, fromDesignRect(372, 1326, 101, 65), { backgroundColor: 'rgba(0,255,0,0.25)' }]} pointerEvents="none" />}
